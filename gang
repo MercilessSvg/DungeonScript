@@ -1,0 +1,78 @@
+local function AutoDungeon()
+    local positions = {
+        CFrame.new(3277, 713, -548),
+        CFrame.new(3259, 713, -588),
+        CFrame.new(3261, 713, -515),
+        CFrame.new(3293, 713, -551),
+    }
+    local index = 1
+    local startTime = os.time()  -- Get the starting time
+    local duration = 15 * 60  -- 15 minutes in seconds
+
+    -- Add a key binding to exit the auto-dungeon
+    local exitKey = "q"
+    local exitKeyDown = false
+    game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+        if key == exitKey then
+            exitKeyDown = true
+        end
+    end)
+    game.Players.LocalPlayer:GetMouse().KeyUp:Connect(function(key)
+        if key == exitKey then
+            exitKeyDown = false
+        end
+    end)
+
+    while true do
+        -- Get the current time
+        local currentTime = os.time()
+
+        -- Calculate the time for the next dungeon teleport (15 seconds before each 30 minutes)
+        local nextTeleportTime = math.ceil(currentTime / (30 * 60)) * (30 * 60) - 15
+
+        -- Calculate the wait time until the next dungeon teleport
+        local waitTime = nextTeleportTime - currentTime
+
+        -- Wait until the next dungeon teleport time
+        wait(waitTime)
+
+        -- Wait until the dungeon teleport option starts
+        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("LocalPlayerTeleport"):FireServer({
+            ["mapId"] = 50016
+        })
+        wait(15)  -- Wait 15 seconds before teleporting
+
+        -- Teleport to each position in a continuous loop of 1 second
+        local loopStartTime = os.time()
+        while os.time() - loopStartTime < duration do  -- Loop for 15 minutes
+            if exitKeyDown then
+                -- Exit the auto-dungeon if the exit key is pressed
+                return
+            end
+
+            local position = positions[index]
+            game.Players.LocalPlayer.Character:MoveTo(position)  -- Teleport to the specified position
+            index = (index % #positions) + 1  -- Move to the next position
+            wait(1)  -- Wait 1 second before teleporting to the next position
+        end
+
+        -- Teleport all players back to the original map when the dungeon is done
+        local args = {
+            [1] = {
+                ["mapId"] = 50001
+            }
+        }
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild("Humanoid") then
+                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("LocalPlayerTeleport"):InvokeServer(unpack(args))
+                end
+            end
+        end
+
+        -- Wait for 60 seconds before restarting the auto-dungeon
+        wait(60)
+    end
+end
+
+-- Start the auto-dungeon
+AutoDungeon()
